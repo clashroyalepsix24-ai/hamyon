@@ -383,7 +383,10 @@
     <div class="sheet-body">
       <div class="field">
         <label id="incLabel">Oylik daromad</label>
-        <div class="money-in"><input id="setIncome" inputmode="numeric" placeholder="0" autocomplete="off"><span class="cur">so'm</span></div>
+        <div style="display:flex; gap:8px; align-items:stretch">
+          <div class="money-in" style="flex:1"><input id="setIncome" inputmode="numeric" placeholder="0" autocomplete="off"><span class="cur">so'm</span></div>
+          <button class="btn btn-primary" id="incSave" style="padding:0 20px; white-space:nowrap">Saqlash</button>
+        </div>
       </div>
       <button class="btn btn-ghost btn-block" id="autoBtn" style="font-size:13.5px; padding:11px">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -788,8 +791,11 @@
     });
   }
   function autoDistribute(){
+    // input'da yozilgan daromadni avval saqlaymiz (tugma bosilmagan bo'lsa ham)
+    const typed=parseNum($("#setIncome").value);
+    if(typed>0) setIncome(view, typed);
     const inc=incomeFor(view);
-    if(inc<=0){ toast("Avval daromadni kiriting"); return; }
+    if(inc<=0){ toast("Avval daromadni kiriting"); $("#setIncome").focus(); return; }
     FUND_ORDER.forEach(f=>{
       const cats=state.categories.filter(c=>c.group===f);
       if(!cats.length) return;
@@ -861,6 +867,8 @@
   $("#importFile").onchange=e=>{ if(e.target.files[0]) importData(e.target.files[0]); e.target.value=""; };
   $("#resetBtn").onclick=()=>{ confirmDialog("Barcha ma'lumotlar (daromad, xarajatlar, kategoriyalar) o'chiriladi. Davom etilsinmi?").then(ok=>{ if(ok){ state=defaultState(); save(); closeScrim("setScrim"); render(); toast("Tozalandi"); } }); };
   $("#setIncome").addEventListener("change",()=>{ setIncome(view,parseNum($("#setIncome").value)); render(); });
+  $("#incSave").onclick=()=>{ const v=parseNum($("#setIncome").value); setIncome(view,v); $("#setIncome").value=v?fmt(v):""; render(); toast(v>0?"Daromad saqlandi ✓":"Daromad tozalandi"); };
+  $("#setIncome").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#incSave").click(); } });
   document.querySelectorAll("[data-close]").forEach(b=> b.onclick=()=>closeScrim(b.dataset.close));
   document.querySelectorAll(".scrim").forEach(s=> s.addEventListener("click",e=>{ if(e.target===s) closeScrim(s.id); }));
   $("#txlist").addEventListener("click",e=>{ const b=e.target.closest("[data-del]"); if(b){ state.expenses=state.expenses.filter(x=>x.id!==b.dataset.del); save(); render(); toast("O'chirildi"); } });
@@ -871,15 +879,16 @@
   render();
 })();
 </script>
+
 <script>
 (function(){
-  try{
-    var icon="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzFFNkI0QyIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0VBRjNFRSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTEyIDE3NmE0MCA0MCAwIDAgMSA0MC00MGgyMTRhMzQgMzQgMCAwIDEgMzQgMzR2MTQiLz48cmVjdCB4PSI5NiIgeT0iMTc2IiB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIxNiIgcng9IjQ0Ii8+PC9nPjxjaXJjbGUgY3g9IjMzNiIgY3k9IjI4OCIgcj0iMjYiIGZpbGw9IiNFQUYzRUUiLz48L3N2Zz4=";
-    var manifest={name:"Hamyon — shaxsiy byudjet",short_name:"Hamyon",start_url:".",scope:".",display:"standalone",background_color:"#0C110E",theme_color:"#1E6B4C",lang:"uz",icons:[{src:icon,sizes:"512x512",type:"image/svg+xml",purpose:"any maskable"}]};
-    var blob=new Blob([JSON.stringify(manifest)],{type:"application/manifest+json"});
-    document.getElementById("mf").href=URL.createObjectURL(blob);
-  }catch(e){}
-  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+ try{
+  var icon="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzFFNkI0QyIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0VBRjNFRSIgc3Ryb2tlLXdpZHRoPSIyNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTEyIDE3NmE0MCA0MCAwIDAgMSA0MC00MGgyMTRhMzQgMzQgMCAwIDEgMzQgMzR2MTQiLz48cmVjdCB4PSI5NiIgeT0iMTc2IiB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIxNiIgcng9IjQ0Ii8+PC9nPjxjaXJjbGUgY3g9IjMzNiIgY3k9IjI4OCIgcj0iMjYiIGZpbGw9IiNFQUYzRUUiLz48L3N2Zz4=";
+ var manifest={name:"Hamyon — shaxsiy byudjet",short_name:"Hamyon",start_url:".",scope:".",display:"standalone",background_color:"#0C110E",theme_color:"#1E6B4C",lang:"uz",icons:[{src:icon,sizes:"512x512",type:"image/svg+xml",purpose:"any maskable"}]};
+ var blob=new Blob([JSON.stringify(manifest)],{type:"application/manifest+json"});
+ document.getElementById("mf").href=URL.createObjectURL(blob);
+ }catch(e){}
+ if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
 })();
 </script>
 </body>
