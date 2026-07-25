@@ -23,8 +23,8 @@
     --brand:#1E6B4C; --brand-strong:#14523A; --brand-soft:#E4EFE8; --on-brand:#FBFAF6;
     --accent:#A9761F; --accent-soft:#F1E7D2;
     --hairline:rgba(20,33,27,.10); --hairline-2:rgba(20,33,27,.16);
-    --fund-needs:#2a78d6; --fund-wants:#eb6834; --fund-savings:#1baf7a;
-    --fund-needs-soft:#e0ebf9; --fund-wants-soft:#fbe6dc; --fund-savings-soft:#dcf1ea;
+    --fund-needs:#2a78d6; --fund-wants:#eb6834; --fund-savings:#1baf7a; --fund-ehson:#e87ba4;
+    --fund-needs-soft:#e0ebf9; --fund-wants-soft:#fbe6dc; --fund-savings-soft:#dcf1ea; --fund-ehson-soft:#f9e3ec;
     --good:#0ca30c; --good-ink:#0a7a26;
     --warn:#e69a12; --warn-ink:#9A6410;
     --crit:#d03b3b; --crit-ink:#B02F2F;
@@ -39,8 +39,8 @@
       --brand:#46A379; --brand-strong:#5CB78D; --brand-soft:#182619; --on-brand:#0C110E;
       --accent:#D0A24B; --accent-soft:#241D0F;
       --hairline:rgba(238,241,234,.12); --hairline-2:rgba(238,241,234,.20);
-      --fund-needs:#3987e5; --fund-wants:#d95926; --fund-savings:#199e70;
-      --fund-needs-soft:#152232; --fund-wants-soft:#2a1912; --fund-savings-soft:#0f2119;
+      --fund-needs:#3987e5; --fund-wants:#d95926; --fund-savings:#199e70; --fund-ehson:#d55181;
+      --fund-needs-soft:#152232; --fund-wants-soft:#2a1912; --fund-savings-soft:#0f2119; --fund-ehson-soft:#2a1620;
       --good:#0ca30c; --good-ink:#3ec46e;
       --warn:#fab219; --warn-ink:#e2a842;
       --crit:#d03b3b; --crit-ink:#e57373;
@@ -307,7 +307,7 @@
       <section class="card">
         <div class="card-pad">
           <div class="card-head">
-            <h2>50 / 30 / 20 taqsimot</h2>
+            <h2>Byudjet taqsimoti</h2>
             <span class="eyebrow" id="fundNote"></span>
           </div>
           <div id="funds"></div>
@@ -387,7 +387,7 @@
       </div>
       <button class="btn btn-ghost btn-block" id="autoBtn" style="font-size:13.5px; padding:11px">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        50/30/20 bo'yicha avtomatik taqsimlash
+        Byudjetni avtomatik taqsimlash (45/25/20/10)
       </button>
 
       <div class="divline"></div>
@@ -441,11 +441,12 @@
   const CUR = "so'm";
   const MONTHS = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
   const FUNDS = {
-    needs:  {name:"Zaruriy ehtiyojlar", pct:50, color:"var(--fund-needs)",   soft:"var(--fund-needs-soft)"},
-    wants:  {name:"Istaklar",           pct:30, color:"var(--fund-wants)",   soft:"var(--fund-wants-soft)"},
-    savings:{name:"Jamg'arma",          pct:20, color:"var(--fund-savings)", soft:"var(--fund-savings-soft)"}
+    needs:  {name:"Zaruriy ehtiyojlar", pct:45, color:"var(--fund-needs)",   soft:"var(--fund-needs-soft)"},
+    wants:  {name:"Istaklar",           pct:25, color:"var(--fund-wants)",   soft:"var(--fund-wants-soft)"},
+    savings:{name:"Jamg'arma",          pct:20, color:"var(--fund-savings)", soft:"var(--fund-savings-soft)"},
+    ehson:  {name:"Ehson",              pct:10, color:"var(--fund-ehson)",   soft:"var(--fund-ehson-soft)"}
   };
-  const FUND_ORDER = ["needs","wants","savings"];
+  const FUND_ORDER = ["needs","wants","savings","ehson"];
 
   // ---------- helpers ----------
   const $ = s => document.querySelector(s);
@@ -459,17 +460,29 @@
   function defaultState(){
     const mk=(name,group)=>({id:uid(),name,group,limit:0});
     return {
-      version:1, currency:CUR,
+      version:2, currency:CUR,
       incomeByMonth:{},
       categories:[
         mk("Oziq-ovqat","needs"), mk("Uy-joy / kommunal","needs"),
         mk("Transport","needs"), mk("Aloqa / internet","needs"),
         mk("Kafe / restoran","wants"), mk("Kiyim-kechak","wants"),
         mk("Dam olish","wants"),
-        mk("Jamg'arma","savings"), mk("Qarz / kredit","savings")
+        mk("Jamg'arma","savings"), mk("Qarz / kredit","savings"),
+        mk("Sadaqa","ehson"), mk("Zakot","ehson")
       ],
       expenses:[]
     };
+  }
+  // eski saqlangan ma'lumotni yangi tuzilishga o'tkazish
+  function migrate(s){
+    if(!s.version || s.version < 2){
+      if(!s.categories.some(c=>c.group==="ehson")){
+        s.categories.push({id:uid(),name:"Sadaqa",group:"ehson",limit:0});
+        s.categories.push({id:uid(),name:"Zakot",group:"ehson",limit:0});
+      }
+      s.version = 2;
+    }
+    return s;
   }
 
   let state = load();
@@ -477,7 +490,7 @@
   let showTable = false;
 
   function load(){
-    try{ const raw=localStorage.getItem(KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.categories) return s; } }catch(e){}
+    try{ const raw=localStorage.getItem(KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.categories) return migrate(s); } }catch(e){}
     return defaultState();
   }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
@@ -531,7 +544,7 @@
     if(incomeFor(view)<=0){
       const h=el("div","hint");
       h.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M12 2v4m0 12v4m10-10h-4M6 12H2m15.07-5.07-2.83 2.83M9.76 14.24l-2.83 2.83m0-10.14 2.83 2.83m4.48 4.48 2.83 2.83" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'+
-        '<p><b>Boshlash:</b> ⚙️ Sozlamalardan oylik <b>daromadingizni</b> kiriting, so\'ng <b>50/30/20 bo\'yicha avtomatik taqsimlash</b> tugmasini bosing — dastur pulingizni o\'zi bo\'lib beradi.</p>';
+        '<p><b>Boshlash:</b> ⚙️ Sozlamalardan oylik <b>daromadingizni</b> kiriting, so\'ng <b>Byudjetni avtomatik taqsimlash</b> tugmasini bosing — dastur pulingizni o\'zi bo\'lib beradi.</p>';
       box.appendChild(h);
     }
   }
@@ -784,7 +797,7 @@
       const each=Math.round(pot/cats.length/1000)*1000;
       cats.forEach(c=>c.limit=each);
     });
-    save(); renderSetCats(); render(); toast("50/30/20 bo'yicha taqsimlandi ✓");
+    save(); renderSetCats(); render(); toast("Byudjet taqsimlandi ✓");
   }
 
   // ---------- backup ----------
